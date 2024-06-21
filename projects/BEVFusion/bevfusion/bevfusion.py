@@ -197,7 +197,10 @@ class BEVFusion(Base3DDetector):
                 feats = feats.sum(
                     dim=1, keepdim=False) / sizes.type_as(feats).view(-1, 1)
                 feats = feats.contiguous()
-
+                
+        # feats: (N, M, 3(4)). N is the number of voxels and M is the maximum
+        #        number of points inside a single voxel.
+        # coords: (N, 3) coords of each voxel grid.
         return feats, coords, sizes
 
     def predict(self, batch_inputs_dict: Dict[str, Optional[Tensor]],

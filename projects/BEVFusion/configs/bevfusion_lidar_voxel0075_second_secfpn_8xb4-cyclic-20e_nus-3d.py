@@ -52,7 +52,9 @@ model = dict(
             voxel_size=[0.075, 0.075, 0.2],
             max_voxels=[120000, 160000],
             voxelize_reduce=True)),
+    # 点云体素化后的处理，这里其实在上一步voxelize_reduce完成了，没用到
     pts_voxel_encoder=dict(type='HardSimpleVFE', num_features=5),
+    # 用spconv对体素做特征编码，生成sparse_shape尺寸的特征图
     pts_middle_encoder=dict(
         type='BEVFusionSparseEncoder',
         in_channels=5,
@@ -63,6 +65,7 @@ model = dict(
                                                                       128)),
         encoder_paddings=((0, 0, 1), (0, 0, 1), (0, 0, (1, 1, 0)), (0, 0)),
         block_type='basicblock'),
+    # 一堆Conv-Bn-ReLU
     pts_backbone=dict(
         type='SECOND',
         in_channels=256,
@@ -71,6 +74,7 @@ model = dict(
         layer_strides=[1, 2],
         norm_cfg=dict(type='BN', eps=0.001, momentum=0.01),
         conv_cfg=dict(type='Conv2d', bias=False)),
+    # 一堆Deconv-Bn-ReLU上采样，然后将多个stride的feature_map做concat
     pts_neck=dict(
         type='SECONDFPN',
         in_channels=[128, 256],
@@ -129,6 +133,7 @@ model = dict(
             voxel_size=[0.075, 0.075],
             pc_range=[-54.0, -54.0],
             nms_type=None),
+        # centerpoint的头，有如下5个头，center=[2,2]，其中第一个2表示最终维度，第二个2表示该头的卷积数
         common_heads=dict(
             center=[2, 2], height=[1, 2], dim=[3, 2], rot=[2, 2], vel=[2, 2]),
         bbox_coder=dict(
