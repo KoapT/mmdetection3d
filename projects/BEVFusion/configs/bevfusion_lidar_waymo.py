@@ -247,7 +247,7 @@ test_pipeline = [
 
 train_dataloader = dict(
     batch_size=4,
-    num_workers=4,
+    num_workers=8,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
@@ -255,7 +255,7 @@ train_dataloader = dict(
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            ann_file='waymo_infos_train.pkl',
+            ann_file='waymo_infos_trainval.pkl',
             pipeline=train_pipeline,
             metainfo=metainfo,
             modality=input_modality,
@@ -295,25 +295,29 @@ visualizer = dict(
 
 # learning rate
 lr = 0.0001
+
+num_epoch = 50
+warm_up_epoch = 10
+
 param_scheduler = [
     # learning rate scheduler
-    # During the first 8 epochs, learning rate increases from 0 to lr * 10
-    # during the next 12 epochs, learning rate decreases from lr * 10 to
+    # During the warm_up epochs, learning rate increases from 0 to lr * 10
+    # during the following epochs, learning rate decreases from lr * 10 to
     # lr * 1e-4
     dict(
         type='CosineAnnealingLR',
-        T_max=8,
+        T_max=warm_up_epoch,
         eta_min=lr * 10,
         begin=0,
-        end=8,
+        end=warm_up_epoch,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        T_max=12,
+        T_max=num_epoch-warm_up_epoch,
         eta_min=lr * 1e-4,
-        begin=8,
-        end=20,
+        begin=warm_up_epoch,
+        end=num_epoch,
         by_epoch=True,
         convert_to_iter_based=True),
     # momentum scheduler
@@ -321,24 +325,24 @@ param_scheduler = [
     # during the next 12 epochs, momentum increases from 0.85 / 0.95 to 1
     dict(
         type='CosineAnnealingMomentum',
-        T_max=8,
+        T_max=warm_up_epoch,
         eta_min=0.85 / 0.95,
         begin=0,
-        end=8,
+        end=warm_up_epoch,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingMomentum',
-        T_max=12,
+        T_max=num_epoch-warm_up_epoch,
         eta_min=1,
-        begin=8,
-        end=20,
+        begin=warm_up_epoch,
+        end=num_epoch,
         by_epoch=True,
         convert_to_iter_based=True)
 ]
 
 # runtime settings
-train_cfg = dict(by_epoch=True, max_epochs=20, val_interval=5)
+train_cfg = dict(by_epoch=True, max_epochs=num_epoch, val_interval=5)
 val_cfg = dict()
 test_cfg = dict()
 
@@ -357,4 +361,4 @@ log_processor = dict(window_size=50)
 default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50),
     checkpoint=dict(type='CheckpointHook', interval=5))
-custom_hooks = [dict(type='DisableObjectSampleHook', disable_after_epoch=15)]
+custom_hooks = [dict(type='DisableObjectSampleHook', disable_after_epoch=40)]
