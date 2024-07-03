@@ -161,48 +161,51 @@ test_pipeline = [
 ]
 
 train_dataloader = dict(
+    batch_size=1,
     dataset=dict(
         dataset=dict(pipeline=train_pipeline, modality=input_modality)))
 val_dataloader = dict(
     dataset=dict(pipeline=test_pipeline, modality=input_modality))
 test_dataloader = val_dataloader
 
+num_epoch = 30
+warm_up_epoch = 2
 param_scheduler = [
     dict(
         type='LinearLR',
         start_factor=0.33333333,
-        by_epoch=False,
+        by_epoch=True,
         begin=0,
-        end=500),
+        end=warm_up_epoch,
+        convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        begin=0,
-        T_max=6,
-        end=6,
+        begin=warm_up_epoch,
+        T_max=num_epoch-warm_up_epoch,
+        end=num_epoch,
         by_epoch=True,
         eta_min_ratio=1e-4,
         convert_to_iter_based=True),
     # momentum scheduler
-    # During the first 8 epochs, momentum increases from 1 to 0.85 / 0.95
-    # during the next 12 epochs, momentum increases from 0.85 / 0.95 to 1
     dict(
         type='CosineAnnealingMomentum',
         eta_min=0.85 / 0.95,
         begin=0,
-        end=2.4,
+        end=warm_up_epoch,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingMomentum',
+        T_max=num_epoch-warm_up_epoch,
         eta_min=1,
-        begin=2.4,
-        end=6,
+        begin=warm_up_epoch,
+        end=num_epoch,
         by_epoch=True,
         convert_to_iter_based=True)
 ]
 
 # runtime settings
-train_cfg = dict(by_epoch=True, max_epochs=6, val_interval=1)
+train_cfg = dict(by_epoch=True, max_epochs=num_epoch, val_interval=5)
 val_cfg = dict()
 test_cfg = dict()
 
@@ -219,5 +222,5 @@ auto_scale_lr = dict(enable=False, base_batch_size=32)
 
 default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50),
-    checkpoint=dict(type='CheckpointHook', interval=1))
+    checkpoint=dict(type='CheckpointHook', interval=5))
 del _base_.custom_hooks
